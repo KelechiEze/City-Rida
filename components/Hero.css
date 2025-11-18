@@ -1,0 +1,151 @@
+/* components/Hero.css */
+.hero-section {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  background-color: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding-top: 6rem; /* pt-24 */
+}
+
+.hero-bg-shapes {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.hero-bg-shape1 {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 75%;
+  height: 75%;
+  background-color: rgba(185, 153, 1, 0.2);
+  transform: translateX(-33.333333%) translateY(-33.333333%) skewY(-12deg);
+}
+
+.hero-bg-shape2 {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #b99901;
+  transform: translateX(25%) translateY(25%) skewY(-12deg);
+}
+
+.hero-bg-shape3 {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 50%;
+  height: 50%;
+  background-color: rgba(0, 0, 0, 0.5);
+  transform: translateX(25%) translateY(25%) skewY(-12deg);
+}
+
+.hero-road {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 33.333333%;
+  z-index: 10;
+}
+
+.hero-road-gradient {
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(to top, #000, rgba(0, 0, 0, 0.8), transparent);
+}
+
+.hero-road-lines {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  color: rgba(107, 114, 128, 0.3); /* text-gray-600/30 */
+}
+
+.hero-container {
+  position: relative;
+  z-index: 20;
+}
+
+.hero-grid {
+  display: grid;
+  align-items: center;
+  gap: 2rem; /* gap-8 */
+}
+
+@media (min-width: 768px) {
+  .hero-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.hero-text-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  color: #fff;
+}
+
+.hero-dots {
+  display: flex;
+  align-items: center;
+  gap: 1rem; /* gap-4 */
+}
+
+.hero-dot {
+  width: 0.5rem; /* w-2 */
+  height: 0.5rem; /* h-2 */
+  border-radius: 9999px;
+  transition: all 0.3s;
+  background-color: rgba(255, 255, 255, 0.5);
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.hero-dot.active {
+  background-color: #FFC107;
+  transform: scale(1.5);
+}
+
+.hero-title, .hero-subtitle {
+  font-size: 3rem; /* text-5xl */
+  line-height: 1;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: -0.05em; /* tracking-tighter */
+}
+
+.hero-title {
+  margin-top: 1.5rem; /* mt-6 */
+}
+
+.hero-subtitle {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+@media (min-width: 768px) {
+  .hero-title, .hero-subtitle {
+    font-size: 4.5rem; /* md:text-7xl */
+  }
+}
+
+.hero-car-container {
+  position: relative;
+}
+
+.hero-car-image {
+  width: 100%;
+  max-width: 42rem; /* max-w-2xl */
+  height: auto;
+  object-fit: contain;
+  margin-left: auto;
+  margin-right: auto;
+}

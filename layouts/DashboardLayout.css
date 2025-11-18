@@ -1,0 +1,51 @@
+/* layouts/DashboardLayout.css */
+.dashboard-layout {
+  min-height: 100vh;
+  background-color: #111827; /* bg-gray-900 */
+  display: flex;
+}
+
+.sidebar-container {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .sidebar-container {
+    display: block;
+  }
+}
+
+.main-content {
+  flex: 1;
+  min-height: 100vh;
+  overflow-y: auto;
+  padding-bottom: 5rem; /* pb-20 */
+  background-color: #111827; /* bg-gray-900 */
+}
+
+@media (min-width: 768px) {
+  .main-content {
+    margin-left: 16rem; /* md:ml-64 */
+    padding-bottom: 0; /* md:pb-0 */
+  }
+}
+
+.main-content-inner {
+  padding: 1rem; /* p-4 */
+}
+
+@media (min-width: 768px) {
+  .main-content-inner {
+    padding: 2rem; /* md:p-8 */
+  }
+}
+
+.bottom-nav-container {
+  display: block;
+}
+
+@media (min-width: 768px) {
+  .bottom-nav-container {
+    display: none;
+  }
+}

@@ -1,0 +1,321 @@
+/* components/Footer.css */
+.footer {
+  background-color: #000;
+  color: #9ca3af; /* text-gray-400 */
+}
+
+.footer-top {
+  position: relative;
+}
+
+.footer-bg-image {
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
+  background-position: right top;
+  opacity: 0.2;
+}
+
+.footer-container {
+  padding-top: 6rem; /* py-24 */
+  padding-bottom: 6rem;
+  position: relative;
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 3rem; /* gap-12 */
+}
+
+@media (min-width: 768px) {
+  .footer-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .footer-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.footer-column > *:not(:last-child) {
+  margin-bottom: 1.5rem; /* space-y-6 */
+}
+.footer-column > .quick-links-list,
+.footer-column > .recent-posts-list,
+.footer-column > .contact-item,
+.footer-column > .newsletter-form {
+  margin-top: 1rem;
+}
+
+.footer-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem; /* gap-2 */
+}
+
+.footer-logo-text {
+  font-size: 1.5rem; /* text-2xl */
+  line-height: 2rem;
+  font-weight: 700;
+  letter-spacing: 0.05em; /* tracking-wider */
+  color: #fff;
+}
+
+.footer-description {
+  font-size: 0.875rem; /* text-sm */
+  line-height: 1.75;
+}
+
+.social-links {
+  display: flex;
+  gap: 0.75rem; /* space-x-3 */
+}
+
+.social-link {
+  width: 2.5rem; /* w-10 */
+  height: 2.5rem; /* h-10 */
+  border: 1px solid #374151; /* border-gray-700 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.3s, background-color 0.3s;
+  color: #9ca3af;
+}
+
+.social-link:hover {
+  background-color: #FFC107;
+  color: #000;
+}
+
+.footer-column-title {
+  font-size: 1.25rem; /* text-xl */
+  font-weight: 700;
+  color: #fff;
+  position: relative;
+  padding-bottom: 0.5rem; /* pb-2 */
+  margin-bottom: 1rem;
+}
+
+.footer-column-title::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 3rem; /* w-12 */
+  height: 2px; /* h-0.5 */
+  background-color: #FFC107;
+}
+
+.quick-links-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 0.875rem; /* text-sm */
+}
+.quick-links-list > *:not(:last-child) {
+    margin-bottom: 0.75rem;
+}
+
+.quick-link-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem; /* gap-2 */
+  transition: transform 0.3s;
+}
+.quick-link-item:hover {
+    transform: translateX(0.5rem); /* hover:translate-x-2 */
+}
+.quick-link-item a {
+    color: #9ca3af;
+    text-decoration: none;
+}
+.quick-link-item a:hover {
+    color: #fff;
+}
+.quick-link-icon {
+  color: #FFC107;
+}
+
+
+.recent-posts-list > *:not(:last-child) {
+  margin-bottom: 1rem; /* space-y-4 */
+}
+
+.recent-post-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem; /* gap-4 */
+}
+
+.post-image {
+  width: 5rem; /* w-20 */
+  height: 5rem; /* h-20 */
+  object-fit: cover;
+}
+
+.post-date {
+  font-size: 0.75rem; /* text-xs */
+  color: #6b7280; /* text-gray-500 */
+  margin-bottom: 0.25rem; /* mb-1 */
+}
+
+.post-title {
+  font-weight: 600;
+  font-size: 0.875rem; /* text-sm */
+  color: #fff;
+  transition: color 0.3s;
+  text-decoration: none;
+}
+.recent-post-item:hover .post-title {
+    color: #FFC107;
+}
+
+
+.contact-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem; /* gap-3 */
+}
+.contact-item a {
+    color: #9ca3af;
+    text-decoration: none;
+    font-size: 0.875rem; /* text-sm */
+}
+.contact-item a:hover {
+    color: #fff;
+}
+.contact-icon {
+  color: #FFC107;
+}
+.footer-column > .contact-item:not(:first-of-type) {
+    margin-top: 1rem;
+}
+
+
+.newsletter-form {
+  margin-top: 1.5rem; /* mt-6 */
+}
+.newsletter-form > *:not(:last-child) {
+    margin-bottom: 1rem;
+}
+
+
+.newsletter-input-wrapper {
+  position: relative;
+}
+
+.newsletter-input {
+  width: 100%;
+  background-color: #111827; /* bg-gray-900 */
+  border: 1px solid #374151; /* border-gray-700 */
+  font-size: 0.875rem; /* text-sm */
+  padding: 0.75rem 3rem 0.75rem 1rem; /* px-4 py-3 pr-12 */
+  color: #fff;
+}
+.newsletter-input:focus {
+    outline: none;
+    border-color: #FFC107;
+}
+
+.newsletter-submit {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  width: 3rem; /* w-12 */
+  height: 100%;
+  background-color: #FFC107;
+  color: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+}
+
+.privacy-checkbox-wrapper {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem; /* space-x-2 */
+}
+
+.privacy-checkbox {
+  margin-top: 0.25rem; /* mt-1 */
+  accent-color: #FFC107;
+}
+
+.privacy-label {
+  font-size: 0.75rem; /* text-xs */
+}
+
+.privacy-link {
+  color: #FFC107;
+  text-decoration: underline;
+}
+
+.footer-bottom-bar {
+  background-color: #FFC107;
+  color: #000;
+}
+
+.footer-bottom-container {
+  padding-top: 1rem; /* py-4 */
+  padding-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.875rem; /* text-sm */
+  font-weight: 500;
+}
+
+@media (min-width: 640px) {
+  .footer-bottom-container {
+    flex-direction: row;
+  }
+}
+
+.footer-bottom-links {
+  display: flex;
+  gap: 1.5rem; /* space-x-6 */
+  margin-top: 0.5rem; /* mt-2 */
+}
+
+@media (min-width: 640px) {
+  .footer-bottom-links {
+    margin-top: 0;
+  }
+}
+.footer-bottom-links a {
+    color: #000;
+    text-decoration: none;
+}
+.footer-bottom-links a:hover {
+    text-decoration: underline;
+}
+
+.scroll-to-top {
+  position: fixed;
+  bottom: 2rem; /* bottom-8 */
+  right: 2rem; /* right-8 */
+  width: 3rem; /* w-12 */
+  height: 3rem; /* h-12 */
+  background-color: #FFC107;
+  color: #000;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-lg */
+  transition: all 0.3s;
+  z-index: 50;
+  border: none;
+  cursor: pointer;
+}
+
+.scroll-to-top:hover {
+  background-color: #f59e0b; /* hover:bg-yellow-500 */
+}

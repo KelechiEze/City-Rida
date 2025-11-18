@@ -1,0 +1,250 @@
+/* components/TaxiRates.css */
+.taxi-rates-section {
+  background-color: #F8F7F2;
+  padding-top: 6rem; /* py-24 */
+  padding-bottom: 6rem;
+}
+
+@media (min-width: 640px) {
+  .taxi-rates-section {
+    padding-top: 8rem; /* sm:py-32 */
+    padding-bottom: 8rem;
+  }
+}
+
+.section-header {
+  text-align: center;
+}
+
+.section-subtitle-alt {
+  font-weight: 600;
+  color: #1f2937; /* text-gray-800 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem; /* gap-2 */
+  letter-spacing: 0.05em; /* tracking-wider */
+}
+
+.subtitle-line {
+  width: 2rem; /* w-8 */
+  height: 0.25rem; /* h-1 */
+  background-color: #FFC107;
+}
+
+.section-title {
+  font-size: 2.25rem; /* text-4xl */
+  line-height: 2.5rem;
+  font-weight: 900;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  line-height: 1.2;
+  color: #111827; /* text-gray-900 */
+}
+
+@media (min-width: 768px) {
+  .section-title {
+    font-size: 3rem; /* md:text-5xl */
+    line-height: 1;
+  }
+}
+
+.topo-pattern-container {
+  width: 100%;
+  max-width: 42rem; /* max-w-2xl */
+  margin: 3rem auto; /* my-12 */
+  height: 4rem; /* h-16 */
+  background-color: #000;
+  position: relative;
+}
+
+.topo-pattern {
+  position: absolute;
+  inset: 0;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 0.4;
+}
+
+.brands-filter {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.5rem; /* gap-2 */
+  margin-bottom: 4rem; /* mb-16 */
+}
+
+@media (min-width: 640px) {
+  .brands-filter {
+    gap: 1rem; /* sm:gap-4 */
+  }
+}
+
+.brand-button {
+  padding: 0.75rem 1.5rem; /* px-6 py-3 */
+  font-weight: 700;
+  font-size: 0.875rem; /* text-sm */
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem; /* gap-2 */
+  border-radius: 0.125rem; /* rounded-sm */
+  border: none;
+  cursor: pointer;
+}
+
+.brand-button.active {
+  background-color: #FFC107;
+  color: #000;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-lg */
+}
+
+.brand-button:not(.active) {
+  background-color: #fff;
+  color: #374151; /* text-gray-700 */
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); /* shadow-sm */
+}
+
+.brand-button:not(.active):hover {
+  background-color: #f3f4f6; /* hover:bg-gray-100 */
+}
+
+.cars-grid {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 2rem; /* gap-8 */
+  min-height: 34rem;
+}
+
+@media (min-width: 768px) {
+  .cars-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .cars-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.car-card {
+  background-color: #1a1a1a;
+  color: #fff;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); /* shadow-2xl */
+}
+
+.car-card-image-container {
+  background-color: #FFC107;
+  padding: 1rem; /* p-4 */
+  position: relative;
+}
+
+.car-card-image {
+  width: 100%;
+  height: 10rem; /* h-40 */
+  object-fit: cover;
+  transition: transform 0.5s ease-in-out;
+}
+
+.car-card:hover .car-card-image {
+  transform: scale(1.05);
+}
+
+.car-card-price-tag {
+  position: absolute;
+  top: 1rem; /* top-4 */
+  left: 0;
+  background-color: #000;
+  color: #fff;
+  padding: 0.25rem 0.75rem; /* px-3 py-1 */
+  font-size: 0.75rem; /* text-xs */
+  font-weight: 700;
+}
+
+.car-card-content {
+  padding: 1.5rem; /* p-6 */
+  background-size: cover;
+  background-position: center;
+}
+
+.car-card-title {
+  font-size: 1.5rem; /* text-2xl */
+  line-height: 2rem;
+  font-weight: 700;
+}
+
+.car-card-subtitle {
+  color: #9ca3af; /* text-gray-400 */
+  font-size: 0.875rem; /* text-sm */
+  margin-bottom: 1rem; /* mb-4 */
+}
+
+.card-divider {
+  border-color: #4b5563; /* border-gray-700 */
+}
+
+.car-details-list {
+  margin: 1rem 0;
+  space-y: 0.75rem; /* space-y-3 */
+  font-size: 0.875rem; /* text-sm */
+}
+
+.car-details-list li {
+    margin-bottom: 0.75rem;
+}
+.car-details-list li:last-child {
+    margin-bottom: 0;
+}
+
+
+.car-detail-item {
+  display: flex;
+  justify-content: space-between;
+}
+
+.detail-label {
+  color: #9ca3af; /* text-gray-400 */
+}
+
+.detail-value {
+  font-weight: 600;
+}
+
+.car-card-book-btn {
+  margin-top: 1.5rem; /* mt-6 */
+  width: 100%;
+  padding: 0.75rem 0; /* py-3 */
+  border: 2px solid #FFC107;
+  color: #FFC107;
+  font-weight: 700;
+  font-size: 0.875rem; /* text-sm */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem; /* gap-2 */
+  background-color: transparent;
+  transition: color 0.3s, background-color 0.3s;
+  cursor: pointer;
+}
+
+.car-card-book-btn:hover {
+  background-color: #FFC107;
+  color: #000;
+}
+
+.empty-state {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #6b7280; /* text-gray-500 */
+  height: 100%;
+}
+
+.empty-state-text {
+  font-size: 1.25rem; /* text-xl */
+}

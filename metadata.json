@@ -1,0 +1,7 @@
+{
+  "name": "Copy of CITYRIDE - Taxi Booking Service",
+  "description": "A modern and professional taxi booking web application, designed to revolutionize the cab logistics industry. Book your ride from anywhere, today!",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
