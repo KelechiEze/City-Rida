@@ -1,141 +1,67 @@
+'use client';
+
 import React, { useEffect, useRef, useState } from 'react';
 
-declare const L: any;
-
-interface MapProps {
-    pickupCoords?: { lat: number, lng: number } | null;
-    destinationCoords?: { lat: number, lng: number } | null;
-    driverLocation?: { lat: number, lng: number } | null;
-    userLocation?: { lat: number, lng: number } | null;
-    onRouteCalculated?: (details: { distance: number, duration: number }) => void;
-}
-
-const Map: React.FC<MapProps> = ({ 
-    pickupCoords, 
-    destinationCoords, 
-    driverLocation, 
-    userLocation,
-    onRouteCalculated 
-}) => {
+const Map: React.FC = () => {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapInstanceRef = useRef<any>(null);
-    const routingControlRef = useRef<any>(null);
-    const driverMarkerRef = useRef<any>(null);
-    const userMarkerRef = useRef<any>(null);
-    const [leafletLoaded, setLeafletLoaded] = useState(false);
+    const [isClient, setIsClient] = useState(false);
 
-    // Load Leaflet scripts and styles
     useEffect(() => {
-        // Check if already loaded
-        if (typeof window === 'undefined') return;
-        
-        if ((window as any).L && (window as any).L.Routing) {
-            setLeafletLoaded(true);
-            return;
-        }
-
-        let leafletCssLoaded = false;
-        let leafletJsLoaded = false;
-        let routingJsLoaded = false;
-
-        const checkAllLoaded = () => {
-            if (leafletCssLoaded && leafletJsLoaded && routingJsLoaded) {
-                setLeafletLoaded(true);
-            }
-        };
-
-        // Load Leaflet CSS
-        if (!document.getElementById('leaflet-css')) {
-            const leafletCss = document.createElement('link');
-            leafletCss.id = 'leaflet-css';
-            leafletCss.rel = 'stylesheet';
-            leafletCss.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-            leafletCss.onload = () => {
-                leafletCssLoaded = true;
-                checkAllLoaded();
-            };
-            leafletCss.onerror = () => {
-                console.error('Failed to load Leaflet CSS');
-                leafletCssLoaded = true;
-                checkAllLoaded();
-            };
-            document.head.appendChild(leafletCss);
-        } else {
-            leafletCssLoaded = true;
-        }
-
-        // Load Leaflet JS
-        if (!document.getElementById('leaflet-js')) {
-            const leafletJs = document.createElement('script');
-            leafletJs.id = 'leaflet-js';
-            leafletJs.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-            leafletJs.async = true;
-            leafletJs.onload = () => {
-                leafletJsLoaded = true;
-                // Now load routing machine after Leaflet is loaded
-                loadRoutingMachine();
-            };
-            leafletJs.onerror = () => {
-                console.error('Failed to load Leaflet JS');
-                leafletJsLoaded = true;
-                checkAllLoaded();
-            };
-            document.body.appendChild(leafletJs);
-        } else {
-            leafletJsLoaded = true;
-            if ((window as any).L) {
-                loadRoutingMachine();
-            }
-        }
-
-        function loadRoutingMachine() {
-            // Load Leaflet Routing Machine
-            if (!document.getElementById('leaflet-routing-machine-js')) {
-                const routingJs = document.createElement('script');
-                routingJs.id = 'leaflet-routing-machine-js';
-                routingJs.src = 'https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js';
-                routingJs.async = true;
-                routingJs.onload = () => {
-                    routingJsLoaded = true;
-                    checkAllLoaded();
-                };
-                routingJs.onerror = () => {
-                    console.error('Failed to load Leaflet Routing Machine');
-                    routingJsLoaded = true;
-                    checkAllLoaded();
-                };
-                document.body.appendChild(routingJs);
-            } else {
-                routingJsLoaded = true;
-                checkAllLoaded();
-            }
-        }
-
-        checkAllLoaded();
+        setIsClient(true);
     }, []);
 
-    // Initialize map
     useEffect(() => {
-        if (!leafletLoaded || !mapContainerRef.current || mapInstanceRef.current) return;
+        if (!isClient || !mapContainerRef.current || mapInstanceRef.current) return;
 
-        try {
-            // Initialize map
-            mapInstanceRef.current = L.map(mapContainerRef.current).setView([6.5244, 3.3792], 12);
-            
-            // Add tile layer
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-                maxZoom: 19,
-            }).addTo(mapInstanceRef.current);
-
-            // Add error handling for tile layer
-            mapInstanceRef.current.on('tileerror', function(error: any) {
-                console.warn('Tile loading error:', error);
+        // Dynamically import Leaflet only on client side
+        import('leaflet').then((L) => {
+            // Fix for default markers in Next.js
+            delete (L.Icon.Default.prototype as any)._getIconUrl;
+            L.Icon.Default.mergeOptions({
+                iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+                iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
             });
 
-        } catch (error) {
-            console.error('Error initializing map:', error);
-        }
+            // Center map on Lagos, Nigeria
+            const map = L.default.map(mapContainerRef.current!).setView([6.5244, 3.3792], 10);
+
+            L.default.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+
+            const taxiIcon = L.default.icon({
+                iconUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iMzAiIHZpZXdCb3g9IjAgMCA1MCAzMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTUuNSAxOUMyLjQ2MjQzIDE5IDAgMTYuNTM3NiAwIDEzLjVDMCAxMC40NjI0IDIuNDYyNDMgOCA1LjUgOEg0NC41QzQ3LjUzNzYgOCA1MCAxMC40NjI0IDUwIDEzLjVDNTAgMTYuNTM3NiA0Ny41Mzc2IDE5IDQ0LjUgMTlIMzlMMzYuNSAyNEgxMy41TDExIDE5SDUuNVoiIGZpbGw9IiNGRkMxMDciLz4KPHBhdGggZD0iTTEyIDExQzEyIDkuODk1NDMgMTIuODk1NCA5IDE0IDlIMzZDMTcuMTA0NiA5IDM4IDkuODk1NDMgMzggMTFWMTlIMTJWMTEiIGZpbGw9IiMxMTExMTEiLz4KPGNpcmNsZSBjeD0iMTAiIGN5PSIyMiIgcj0iNCIgZmlsbD0iYmxhY2siIHN0cm9rZT0iI0ZGQzEwNyIgc3Ryb2tlLXdpZHRoPSIxLjUiLz4KPGNpcmNsZSBjeD0iNDAiIGN5PSIyMiIgcj0iNCIgZmlsbD0iYmxhY2siIHN0cm9rZT0iI0ZGQzEwNyIgc3Ryb2tlLXdpZHRoPSIxLjUiLz4KPC9zdmc+Cg==',
+                iconSize: [38, 23],
+                iconAnchor: [19, 23],
+                popupAnchor: [0, -23]
+            });
+            
+            // Lagos-specific cab locations
+            const cabs = [
+                { lat: 6.5244, lng: 3.3792, name: "Cab Ikeja" },
+                { lat: 6.4550, lng: 3.3841, name: "Cab Victoria Island" },
+                { lat: 6.6018, lng: 3.3515, name: "Cab Agege" },
+                { lat: 6.4350, lng: 3.4487, name: "Cab Lekki" },
+                { lat: 6.4698, lng: 3.5852, name: "Cab Ajah" },
+            ];
+
+            cabs.forEach(cab => {
+                L.default.marker([cab.lat, cab.lng], { icon: taxiIcon })
+                    .addTo(map)
+                    .bindPopup(`<b>${cab.name}</b><br>Available for booking.`);
+            });
+
+            mapInstanceRef.current = map;
+
+            // Handle map resize
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 100);
+        }).catch((error) => {
+            console.error('Failed to load Leaflet:', error);
+        });
 
         return () => {
             if (mapInstanceRef.current) {
@@ -143,111 +69,20 @@ const Map: React.FC<MapProps> = ({
                 mapInstanceRef.current = null;
             }
         };
-    }, [leafletLoaded]);
+    }, [isClient]);
 
-    // Update map with coordinates and routing
-    useEffect(() => {
-        if (!leafletLoaded || !mapInstanceRef.current) return;
+    if (!isClient) {
+        return (
+            <div className="w-full h-full rounded-lg bg-gray-200 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="w-8 h-8 border-4 border-[#FFC107] border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                    <p className="text-gray-600 text-sm">Loading map...</p>
+                </div>
+            </div>
+        );
+    }
 
-        const map = mapInstanceRef.current;
-
-        // Clear existing routing control
-        if (routingControlRef.current) {
-            map.removeControl(routingControlRef.current);
-            routingControlRef.current = null;
-        }
-
-        // Clear existing markers
-        if (driverMarkerRef.current) {
-            map.removeLayer(driverMarkerRef.current);
-            driverMarkerRef.current = null;
-        }
-        if (userMarkerRef.current) {
-            map.removeLayer(userMarkerRef.current);
-            userMarkerRef.current = null;
-        }
-
-        // Add user marker
-        if (userLocation) {
-            const userIcon = L.divIcon({
-                className: 'user-marker',
-                html: `<div style="width: 12px; height: 12px; background: #4285F4; border: 2px solid white; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
-                iconSize: [16, 16],
-                iconAnchor: [8, 8]
-            });
-            userMarkerRef.current = L.marker([userLocation.lat, userLocation.lng], { 
-                icon: userIcon,
-                zIndexOffset: 1000 
-            }).addTo(map);
-        }
-
-        // Add driver marker
-        if (driverLocation) {
-            const taxiIcon = L.divIcon({
-                className: 'driver-marker',
-                html: `<div style="width: 24px; height: 24px; background: #FFC107; border: 2px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.3); font-size: 12px; color: black;">🚗</div>`,
-                iconSize: [24, 24],
-                iconAnchor: [12, 12]
-            });
-            driverMarkerRef.current = L.marker([driverLocation.lat, driverLocation.lng], { 
-                icon: taxiIcon,
-                zIndexOffset: 900 
-            }).addTo(map);
-        }
-
-        // Add routing if we have both pickup and destination
-        if (pickupCoords && destinationCoords && L.Routing) {
-            try {
-                routingControlRef.current = L.Routing.control({
-                    waypoints: [
-                        L.latLng(pickupCoords.lat, pickupCoords.lng),
-                        L.latLng(destinationCoords.lat, destinationCoords.lng)
-                    ],
-                    routeWhileDragging: false,
-                    addWaypoints: false,
-                    draggableWaypoints: false,
-                    fitSelectedRoutes: true,
-                    show: false, // Hide the instructions panel
-                    lineOptions: { 
-                        styles: [{ color: '#FFC107', weight: 6, opacity: 0.8 }] 
-                    },
-                    createMarker: () => null // Hide default markers
-                }).on('routesfound', function(e: any) {
-                    if (onRouteCalculated && e.routes && e.routes[0]) {
-                        const route = e.routes[0];
-                        onRouteCalculated({
-                            distance: route.summary.totalDistance / 1000, // in km
-                            duration: route.summary.totalTime / 60, // in minutes
-                        });
-                    }
-                }).addTo(map);
-            } catch (error) {
-                console.error('Error setting up routing:', error);
-            }
-        }
-
-        // Fit bounds to show all relevant markers
-        const group = new L.FeatureGroup();
-        if (userMarkerRef.current) group.addLayer(userMarkerRef.current);
-        if (driverMarkerRef.current) group.addLayer(driverMarkerRef.current);
-        
-        if (group.getLayers().length > 0) {
-            map.fitBounds(group.getBounds().pad(0.1));
-        }
-
-    }, [pickupCoords, destinationCoords, driverLocation, userLocation, leafletLoaded, onRouteCalculated]);
-
-    return (
-        <div 
-            ref={mapContainerRef} 
-            className="leaflet-container" 
-            style={{ 
-                height: '100%', 
-                width: '100%',
-                background: '#f8f9fa' // Fallback background
-            }} 
-        />
-    );
+    return <div ref={mapContainerRef} className="w-full h-full rounded-lg" />;
 };
 
 export default Map;

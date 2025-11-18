@@ -1,601 +1,979 @@
 'use client';
-import React, { useState, useEffect, useRef, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Phone, MessageCircle, X, Car, User, Star, MapPin, ArrowLeft, Loader, CheckCircle, Clock } from 'lucide-react';
-import Map from '../../../components/dashboard/Map';
-import './BookRide.css';
 
-// Type definitions
-interface Coords { lat: number; lng: number; }
-interface ActiveRide {
-    status: 'DRIVER_EN_ROUTE' | 'TRIP_IN_PROGRESS' | 'COMPLETED';
+import React, { useState, useEffect, useRef } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { MapPin, Clock, Calendar, Users, Car, Star, Zap, ArrowLeft, Navigation, X, CheckCircle, User } from 'lucide-react';
+import { gsap } from 'gsap';
+
+interface RideOption {
+    id: string;
+    name: string;
+    description: string;
+    basePrice: number;
+    price: string;
+    eta: string;
+    capacity: number;
+    icon: React.ReactNode;
+    features: string[];
+    popular?: boolean;
+}
+
+interface Driver {
+    id: string;
+    name: string;
+    car: string;
+    license: string;
+    rating: number;
+    trips: number;
+    currentLocation: string;
+    price: string;
+    eta: string;
+    image: string;
+}
+
+interface Trip {
+    id: string;
+    date: string;
+    time: string;
     pickup: string;
     destination: string;
-    pickupCoords: Coords;
-    destinationCoords: Coords;
-    driver: {
-        id: string;
-        name: string;
-        car: string;
-        license: string;
-        rating: number;
-        location: Coords;
-        eta: number;
-    };
-    route?: any; 
+    driver: string;
+    car: string;
+    license: string;
+    price: string;
+    status: 'completed' | 'upcoming' | 'cancelled';
+    rating?: number;
+    duration: string;
+    distance: string;
 }
 
-interface RideOption { 
-    id: string; 
-    name: string; 
-    description: string; 
-    priceMultiplier: number; 
-    capacity: number; 
-    icon: React.ReactNode; 
-    isPopular?: boolean; 
-    features: string[]; 
-}
-
-interface Driver { 
-    id: string; 
-    name: string; 
-    car: string; 
-    license: string; 
-    rating: number; 
-    location: Coords; 
-    eta: number; 
-}
-
-// Mocks
-const lagosLocations = [
-    { name: 'Ikeja City Mall', coords: { lat: 6.6158, lng: 3.3588 } },
-    { name: 'Murtala Muhammed Airport', coords: { lat: 6.5772, lng: 3.3211 } },
-    { name: 'Lekki Conservation Centre', coords: { lat: 6.4403, lng: 3.5321 } },
-    { name: 'Victoria Island', coords: { lat: 6.4285, lng: 3.4218 } },
-    { name: 'University of Lagos', coords: { lat: 6.5186, lng: 3.3950 } },
-    { name: 'National Stadium, Surulere', coords: { lat: 6.5056, lng: 3.3600 } },
-];
-
-const rideOptions: RideOption[] = [
-    { 
-        id: 'standard', 
-        name: 'Standard', 
-        description: 'Affordable, everyday rides', 
-        priceMultiplier: 1, 
-        capacity: 4, 
-        icon: <Car size={20}/>, 
-        features: ['AC', 'Music'] 
-    },
-    { 
-        id: 'comfort', 
-        name: 'Comfort', 
-        description: 'Newer cars with extra legroom', 
-        priceMultiplier: 1.3, 
-        capacity: 4, 
-        icon: <Car size={20} />, 
-        isPopular: true, 
-        features: ['AC', 'Music', 'Wifi'] 
-    },
-    { 
-        id: 'suv', 
-        name: 'SUV', 
-        description: 'Room for friends and luggage', 
-        priceMultiplier: 1.6, 
-        capacity: 6, 
-        icon: <Car size={20} />, 
-        features: ['AC', 'Music', 'Extra Space'] 
-    },
-];
-
-const mockDrivers: Driver[] = [
-    { id: 'd1', name: 'Tunde Adebayo', car: 'Toyota Camry', license: 'LAG-123', rating: 4.9, location: { lat: 6.61, lng: 3.35 }, eta: 3 },
-    { id: 'd2', name: 'Chinedu Obi', car: 'Honda Accord', license: 'APP-456', rating: 4.8, location: { lat: 6.62, lng: 3.36 }, eta: 5 },
-    { id: 'd3', name: 'Folake Silva', car: 'Lexus RX350', license: 'IKJ-789', rating: 5.0, location: { lat: 6.60, lng: 3.37 }, eta: 6 },
-    { id: 'd4', name: 'Emeka Okafor', car: 'Kia Rio', license: 'EPE-012', rating: 4.7, location: { lat: 6.59, lng: 3.34 }, eta: 8 },
-];
-
-function ActiveRideContent() {
-    const router = useRouter();
-    const [ride, setRide] = useState<ActiveRide | null>(null);
-    const [showRatingModal, setShowRatingModal] = useState(false);
-    const [rideProgress, setRideProgress] = useState(0);
-
-    useEffect(() => {
-        const activeRideData = localStorage.getItem('active_ride_passenger');
-        if (activeRideData) {
-            const parsedRide: ActiveRide = JSON.parse(activeRideData);
-            setRide(parsedRide);
-            
-            // Simulate ride progress
-            const progressInterval = setInterval(() => {
-                setRideProgress(prev => {
-                    if (prev >= 100) {
-                        clearInterval(progressInterval);
-                        setShowRatingModal(true);
-                        return 100;
-                    }
-                    return prev + (100 / 60); // Complete in 60 seconds
-                });
-            }, 1000);
-
-            return () => clearInterval(progressInterval);
-        } else {
-            router.replace('/dashboard/book');
+// Function to get current location using browser geolocation
+const getCurrentLocation = (): Promise<{ lat: number; lng: number }> => {
+    return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+            reject(new Error('Geolocation is not supported by this browser'));
+            return;
         }
-    }, [router]);
 
-    const handleRatingSubmit = (rating: number) => {
-        if (!ride) return;
-        
-        const completedTrip = {
-            ...ride,
-            id: `trip_${Date.now()}`,
-            date: new Date().toISOString(),
-            time: new Date().toLocaleTimeString(),
-            price: `₦${(Math.random() * 2000 + 1500).toFixed(0)}`,
-            status: 'completed',
-            rating: rating,
-            duration: `${Math.round(Math.random()*20+10)} min`,
-            distance: `${(Math.random()*10+5).toFixed(1)} km`,
-        };
-        
-        const existingTrips = JSON.parse(localStorage.getItem('userTrips') || '[]');
-        localStorage.setItem('userTrips', JSON.stringify([completedTrip, ...existingTrips]));
-        localStorage.removeItem('active_ride_passenger');
-        router.push('/dashboard/trips');
-    };
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                resolve({
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                });
+            },
+            (error) => {
+                console.error('Error getting current location:', error);
+                reject(error);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 60000
+            }
+        );
+    });
+};
 
-    if (!ride) return <div className="loading-overlay">Loading Trip...</div>;
+// Lagos coordinates for major areas
+const LAGOS_LOCATIONS: { [key: string]: { lat: number; lng: number } } = {
+    'Ikeja': { lat: 6.6059, lng: 3.3491 },
+    'Victoria Island': { lat: 6.4281, lng: 3.4210 },
+    'Lekki': { lat: 6.4650, lng: 3.5770 },
+    'Ajah': { lat: 6.4730, lng: 3.5770 },
+    'Surulere': { lat: 6.5010, lng: 3.3580 },
+    'Yaba': { lat: 6.5090, lng: 3.3710 },
+    'Ikoyi': { lat: 6.4520, lng: 3.4380 },
+    'Maryland': { lat: 6.5780, lng: 3.3610 },
+    'Gbagada': { lat: 6.5480, lng: 3.3810 },
+    'Oshodi': { lat: 6.5550, lng: 3.3430 },
+    'Agege': { lat: 6.6150, lng: 3.3230 },
+    'Ikorodu': { lat: 6.6190, lng: 3.5110 },
+    'Badagry': { lat: 6.4150, lng: 2.8870 }
+};
 
-    return (
-        <div className="active-ride-container">
-            <Map 
-                pickupCoords={ride.pickupCoords}
-                destinationCoords={ride.destinationCoords}
-                driverLocation={ride.driver.location}
-            />
-            
-            <div className="trip-bottom-sheet">
-                <div className="handle-bar"></div>
-                <div className="status-header">
-                    <h2>Driver is on the way</h2>
-                    <p>Arriving in ~{ride.driver.eta} min</p>
-                    
-                    {/* Progress Bar */}
-                    <div className="ride-progress-container">
-                        <div className="ride-progress-bar">
-                            <div 
-                                className="ride-progress-fill" 
-                                style={{ width: `${rideProgress}%` }}
-                            ></div>
-                        </div>
-                        <div className="ride-progress-text">
-                            {Math.round(rideProgress)}% Complete
-                        </div>
-                    </div>
-                </div>
-                
-                <div className="driver-info-card">
-                    <div className="driver-avatar">
-                        <User size={24} />
-                    </div>
-                    <div className="driver-details">
-                        <h4>{ride.driver.name}</h4>
-                        <div className="rating">
-                            <Star size={14} fill="currentColor" /> {ride.driver.rating}
-                        </div>
-                    </div>
-                    <div className="vehicle-details">
-                        <p>{ride.driver.car}</p>
-                        <p>{ride.driver.license}</p>
-                    </div>
-                    <div className="driver-contact">
-                        <button className="contact-btn">
-                            <Phone size={20} />
-                        </button>
-                        <button className="contact-btn">
-                            <MessageCircle size={20} />
-                        </button>
-                    </div>
-                </div>
-            </div>
-            
-            {showRatingModal && (
-                <RatingModal 
-                    ride={ride} 
-                    onSubmit={handleRatingSubmit} 
-                />
-            )}
-        </div>
-    );
-}
+// Calculate distance between two points using Haversine formula
+const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371; // Earth's radius in kilometers
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+        Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+        Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const distanceKm = R * c;
+    
+    return Math.round(distanceKm * 10) / 10;
+};
 
-const RatingModal: React.FC<{ride: ActiveRide; onSubmit: (rating: number) => void}> = ({ ride, onSubmit }) => {
-    const [rating, setRating] = useState(0);
-    const [hoverRating, setHoverRating] = useState(0);
+// Confirmation Modal Component
+const RideConfirmationModal: React.FC<{
+    isOpen: boolean;
+    onClose: () => void;
+    trip: Trip;
+    onViewTrips: () => void;
+}> = ({ isOpen, onClose, trip, onViewTrips }) => {
+    if (!isOpen) return null;
 
     return (
-        <div className="modal-overlay">
-            <div className="modal-content animate-scale-in">
-                <div className="rating-modal-header">
-                    <CheckCircle size={48} className="success-icon" />
-                    <h3>Ride Completed!</h3>
-                    <p>How was your ride with {ride.driver.name}?</p>
-                </div>
-                
-                <div className="rating-stars">
-                    {[1, 2, 3, 4, 5].map(star => (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl max-w-md w-full mx-auto animate-scale-in">
+                {/* Header */}
+                <div className="p-6 border-b border-gray-200">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center">
+                                <CheckCircle size={24} className="text-green-600" />
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-xl text-gray-800">Ride Confirmed!</h3>
+                                <p className="text-gray-600 text-sm">Your driver is on the way</p>
+                            </div>
+                        </div>
                         <button
-                            key={star}
-                            onClick={() => setRating(star)}
-                            onMouseEnter={() => setHoverRating(star)}
-                            onMouseLeave={() => setHoverRating(0)}
-                            className="star-button"
-                            type="button"
+                            onClick={onClose}
+                            className="text-gray-400 hover:text-gray-600 transition-colors"
                         >
-                            <Star 
-                                size={36} 
-                                className={
-                                    star <= (hoverRating || rating) ? 'filled' : ''
-                                }
-                            />
+                            <X size={20} />
                         </button>
-                    ))}
+                    </div>
                 </div>
-                
-                <div className="rating-labels">
-                    <span>Poor</span>
-                    <span>Fair</span>
-                    <span>Good</span>
-                    <span>Very Good</span>
-                    <span>Excellent</span>
+
+                {/* Trip Details */}
+                <div className="p-6 space-y-4">
+                    <div className="flex items-center justify-between">
+                        <span className="text-gray-600">Driver</span>
+                        <span className="font-semibold">{trip.driver}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <span className="text-gray-600">Vehicle</span>
+                        <span className="font-semibold">{trip.car}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <span className="text-gray-600">License</span>
+                        <span className="font-semibold">{trip.license}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <span className="text-gray-600">ETA</span>
+                        <span className="font-semibold text-green-600">{trip.duration}</span>
+                    </div>
+                    
+                    <div className="pt-4 border-t border-gray-200">
+                        <div className="flex items-center justify-between text-lg font-bold">
+                            <span>Total</span>
+                            <span className="text-gray-800">{trip.price}</span>
+                        </div>
+                    </div>
                 </div>
-                
-                <button 
-                    onClick={() => onSubmit(rating)} 
-                    disabled={rating === 0} 
-                    className="submit-rating-btn"
-                >
-                    Submit Rating {rating > 0 && `(${rating})`}
-                </button>
+
+                {/* Actions */}
+                <div className="p-6 border-t border-gray-200 flex gap-3">
+                    <button
+                        onClick={onClose}
+                        className="flex-1 py-3 px-4 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+                    >
+                        Track Ride
+                    </button>
+                    <button
+                        onClick={onViewTrips}
+                        className="flex-1 py-3 px-4 bg-[#FFC107] text-black rounded-lg font-semibold hover:bg-yellow-500 transition-colors"
+                    >
+                        View Trips
+                    </button>
+                </div>
             </div>
         </div>
     );
-}
+};
 
-function BookingFlowContent() {
+// Driver Card Component
+const DriverCard: React.FC<{
+    driver: Driver;
+    isSelected: boolean;
+    onSelect: (driver: Driver) => void;
+}> = ({ driver, isSelected, onSelect }) => {
+    return (
+        <div
+            onClick={() => onSelect(driver)}
+            className={`p-4 rounded-xl border-2 cursor-pointer transition-all hover:shadow-md ${
+                isSelected 
+                    ? 'border-[#FFC107] bg-yellow-50 ring-2 ring-yellow-100' 
+                    : 'border-gray-200 hover:border-gray-300'
+            }`}
+        >
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-start gap-3 flex-1 min-w-0">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                        <User size={20} className="text-gray-600" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                        <h4 className="font-bold text-gray-800 text-sm sm:text-base truncate">{driver.name}</h4>
+                        <p className="text-xs sm:text-sm text-gray-500 truncate">{driver.car}</p>
+                        <div className="flex flex-wrap gap-2 mt-1">
+                            <span className="flex items-center gap-1 text-xs text-gray-600">
+                                <Star size={12} className="text-yellow-500" />
+                                {driver.rating} ({driver.trips} trips)
+                            </span>
+                            <span className="flex items-center gap-1 text-xs text-gray-600">
+                                <Navigation size={12} />
+                                <span className="truncate">{driver.currentLocation}</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div className="text-right flex-shrink-0">
+                    <p className="text-lg sm:text-xl font-bold text-gray-800 whitespace-nowrap">{driver.price}</p>
+                    <p className="text-xs text-gray-500">ETA: {driver.eta}</p>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const BookRide: React.FC = () => {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const [bookingStep, setBookingStep] = useState<'enterRoute' | 'selectRide' | 'selectDriver'>('enterRoute');
-    const [userLocation, setUserLocation] = useState<Coords | null>(null);
     const [pickup, setPickup] = useState('Current Location');
     const [destination, setDestination] = useState('');
-    const [distance, setDistance] = useState<number | null>(null);
-    const [duration, setDuration] = useState<number | null>(null);
-    const [selectedRide, setSelectedRide] = useState<RideOption | null>(null);
+    const [selectedRide, setSelectedRide] = useState<string | null>(null);
     const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
-    const [isFindingDriver, setIsFindingDriver] = useState(false);
-    const [sheetHeight, setSheetHeight] = useState(280);
+    const [rideTime, setRideTime] = useState('now');
+    const [isLoading, setIsLoading] = useState(false);
+    const [isFindingDrivers, setIsFindingDrivers] = useState(false);
+    const [showDrivers, setShowDrivers] = useState(false);
+    const [distance, setDistance] = useState<number>(0);
+    const [calculatedPrices, setCalculatedPrices] = useState<{ [key: string]: string }>({});
+    const [showConfirmation, setShowConfirmation] = useState(false);
+    const [confirmedTrip, setConfirmedTrip] = useState<Trip | null>(null);
+    const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
+    const [isGettingLocation, setIsGettingLocation] = useState(false);
+    
+    const driversContainerRef = useRef<HTMLDivElement>(null);
 
-    // Get destination from URL params if coming from overview
+    // Get destination from URL params
     useEffect(() => {
         const urlDestination = searchParams.get('destination');
+        const fromOverview = searchParams.get('fromOverview') === 'true';
+        
         if (urlDestination) {
             setDestination(urlDestination);
-            setBookingStep('selectRide');
-            setSheetHeight(420);
         }
     }, [searchParams]);
 
-    const pickupCoords = pickup === 'Current Location' ? userLocation : lagosLocations.find(l => l.name === pickup)?.coords || null;
-    const destinationCoords = lagosLocations.find(l => l.name === destination)?.coords || null;
+    // Get current location on component mount
+    useEffect(() => {
+        const initializeCurrentLocation = async () => {
+            setIsGettingLocation(true);
+            try {
+                const location = await getCurrentLocation();
+                setCurrentLocation(location);
+                console.log('Current location:', location);
+            } catch (error) {
+                console.error('Failed to get current location:', error);
+                // Fallback to Lagos Island coordinates
+                setCurrentLocation({ lat: 6.5244, lng: 3.3792 });
+            } finally {
+                setIsGettingLocation(false);
+            }
+        };
+
+        initializeCurrentLocation();
+    }, []);
+
+    const calculatePrice = (basePrice: number, distance: number): number => {
+        const baseFare = 500;
+        const distanceRate = basePrice * distance;
+        const price = baseFare + distanceRate;
+        return Math.round(price / 100) * 100;
+    };
+
+    const getLocationCoordinates = async (locationName: string): Promise<{ lat: number; lng: number }> => {
+        if (locationName === 'Current Location' && currentLocation) {
+            return currentLocation;
+        }
+        return LAGOS_LOCATIONS[locationName] || LAGOS_LOCATIONS['Ikeja'];
+    };
+
+    // Generate drivers with dynamic pricing based on calculated prices
+    const generateDrivers = (rideId: string): Driver[] => {
+        const baseDrivers = [
+            {
+                id: '1',
+                name: 'Tunde Adewale',
+                car: 'Toyota Corolla 2022',
+                license: 'LAG-1234',
+                rating: 4.9,
+                trips: 1247,
+                currentLocation: '2km away',
+                price: '',
+                eta: '5 min',
+                image: ''
+            },
+            {
+                id: '2',
+                name: 'Chinedu Okoro',
+                car: 'Honda Accord 2021',
+                license: 'LAG-5678',
+                rating: 4.8,
+                trips: 892,
+                currentLocation: '1.5km away',
+                price: '',
+                eta: '4 min',
+                image: ''
+            },
+            {
+                id: '3',
+                name: 'Emeka Nwosu',
+                car: 'Toyota Camry 2023',
+                license: 'LAG-9012',
+                rating: 4.7,
+                trips: 567,
+                currentLocation: '3km away',
+                price: '',
+                eta: '7 min',
+                image: ''
+            },
+            {
+                id: '4',
+                name: 'Aisha Bello',
+                car: 'Hyundai Elantra 2022',
+                license: 'LAG-3456',
+                rating: 4.9,
+                trips: 1103,
+                currentLocation: '1.2km away',
+                price: '',
+                eta: '3 min',
+                image: ''
+            }
+        ];
+
+        // Use the calculated price for the selected ride, or add small variations
+        const basePrice = calculatedPrices[rideId] || '₦2,500';
+        
+        return baseDrivers.map((driver, index) => ({
+            ...driver,
+            price: calculateDriverPrice(basePrice, index)
+        }));
+    };
+
+    // Calculate driver price with small variations
+    const calculateDriverPrice = (basePrice: string, driverIndex: number): string => {
+        try {
+            const baseAmount = parseInt(basePrice.replace('₦', '').replace(',', ''));
+            // Add small variations (-₦200 to +₦200) based on driver index
+            const variation = (driverIndex % 4 - 1.5) * 100; // Creates variations like -200, -100, 0, 100
+            const finalAmount = Math.max(1000, baseAmount + variation); // Ensure minimum price
+            return `₦${Math.round(finalAmount / 100) * 100}`;
+        } catch (error) {
+            return basePrice;
+        }
+    };
+
+    const [availableDrivers, setAvailableDrivers] = useState<Driver[]>([]);
 
     useEffect(() => {
-        // Get user location
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    setUserLocation({ 
-                        lat: position.coords.latitude, 
-                        lng: position.coords.longitude 
-                    });
+        const initializeDistanceAndPrices = async () => {
+            if (destination) {
+                // Calculate distance using coordinates
+                const pickupCoords = await getLocationCoordinates(pickup);
+                const destCoords = await getLocationCoordinates(destination);
+                
+                const calculatedDistance = calculateDistance(
+                    pickupCoords.lat, pickupCoords.lng,
+                    destCoords.lat, destCoords.lng
+                );
+                
+                setDistance(calculatedDistance);
+                
+                const prices: { [key: string]: string } = {};
+                rideOptions.forEach(ride => {
+                    const price = calculatePrice(ride.basePrice, calculatedDistance);
+                    prices[ride.id] = `₦${price.toLocaleString()}`;
+                });
+                setCalculatedPrices(prices);
+
+                // Automatically start finding drivers when coming from overview
+                const fromOverview = searchParams.get('fromOverview') === 'true';
+                if (fromOverview) {
+                    handleFindDrivers();
+                }
+            }
+        };
+
+        initializeDistanceAndPrices();
+    }, [destination, pickup, currentLocation, searchParams]);
+
+    // Update drivers when selected ride changes and prices are calculated
+    useEffect(() => {
+        if (selectedRide && calculatedPrices[selectedRide]) {
+            const drivers = generateDrivers(selectedRide);
+            setAvailableDrivers(drivers);
+        }
+    }, [selectedRide, calculatedPrices]);
+
+    // GSAP animation for drivers list
+    useEffect(() => {
+        if (showDrivers && driversContainerRef.current) {
+            const driverCards = driversContainerRef.current.querySelectorAll('.driver-card');
+            
+            gsap.fromTo(driverCards, 
+                {
+                    x: -100,
+                    opacity: 0
                 },
-                () => {
-                    setUserLocation(lagosLocations[0].coords);
+                {
+                    x: 0,
+                    opacity: 1,
+                    stagger: 0.1,
+                    duration: 0.6,
+                    ease: "power2.out"
                 }
             );
         }
-    }, []);
+    }, [showDrivers]);
 
-    useEffect(() => {
-        if (pickupCoords && destinationCoords) {
-            const randomDistance = Math.random() * 15 + 5;
-            const randomDuration = randomDistance * (Math.random() * 1.5 + 2.5);
-            setDistance(randomDistance);
-            setDuration(randomDuration);
+    const rideOptions: RideOption[] = [
+        {
+            id: 'economy',
+            name: 'Economy',
+            description: 'Affordable everyday rides',
+            basePrice: 200,
+            price: '₦1,500',
+            eta: '5 min',
+            capacity: 4,
+            icon: <Car size={20} className="text-gray-600" />,
+            features: ['Air conditioning', 'Standard comfort']
+        },
+        {
+            id: 'comfort',
+            name: 'Comfort',
+            description: 'Extra legroom and newer cars',
+            basePrice: 300,
+            price: '₦2,200',
+            eta: '7 min',
+            capacity: 4,
+            icon: <Car size={20} className="text-blue-500" />,
+            features: ['Extra legroom', 'Newer cars', 'Premium comfort'],
+            popular: true
+        },
+        {
+            id: 'premium',
+            name: 'Premium',
+            description: 'Luxury vehicles with professional drivers',
+            basePrice: 450,
+            price: '₦3,500',
+            eta: '10 min',
+            capacity: 4,
+            icon: <Star size={20} className="text-yellow-500" />,
+            features: ['Luxury vehicle', 'Professional driver', 'Bottled water']
+        },
+        {
+            id: 'xl',
+            name: 'XL',
+            description: 'Extra space for groups',
+            basePrice: 350,
+            price: '₦2,800',
+            eta: '8 min',
+            capacity: 6,
+            icon: <Users size={20} className="text-green-500" />,
+            features: ['6 seats', 'Extra luggage space', 'Great for groups']
         }
-    }, [pickupCoords, destinationCoords]);
+    ];
 
-    const handleDestinationSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const value = e.target.value;
-        setDestination(value);
-        if (value) {
-            setBookingStep('selectRide');
-            setSheetHeight(420);
+    const popularLagosAreas = [
+        'Ikeja', 'Victoria Island', 'Lekki', 'Ajah', 'Surulere', 'Yaba', 'Ikoyi',
+        'Maryland', 'Gbagada', 'Oshodi', 'Agege', 'Ikorodu', 'Badagry'
+    ];
+
+    const handleFindDrivers = async () => {
+        if (!selectedRide || !pickup || !destination) {
+            console.log('Please fill in all required fields and select a ride type.');
+            return;
         }
-    };
 
-    const handleFindDriver = () => {
-        if (!selectedRide) return;
-        
-        setIsFindingDriver(true);
-        setTimeout(() => {
-            setBookingStep('selectDriver');
-            setSheetHeight(500);
-            setIsFindingDriver(false);
-        }, 2000);
-    };
-
-    const handleConfirmRide = () => {
-        if (!selectedDriver || !pickupCoords || !destinationCoords || !selectedRide) return;
-        
-        const newActiveRide: ActiveRide = {
-            status: 'DRIVER_EN_ROUTE',
-            pickup, 
-            destination, 
-            pickupCoords, 
-            destinationCoords,
-            driver: selectedDriver,
-        };
-        localStorage.setItem('active_ride_passenger', JSON.stringify(newActiveRide));
-        window.location.reload();
-    };
-
-    const calculatePrice = (option: RideOption) => {
-        if (!distance) return '0';
-        return (distance * option.priceMultiplier * 150).toFixed(0);
-    };
-
-    const handleBackToRideSelection = () => {
-        setBookingStep('selectRide');
-        setSheetHeight(420);
+        setIsFindingDrivers(true);
+        setShowDrivers(false);
         setSelectedDriver(null);
+
+        // Simulate finding drivers for 3 seconds
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        setIsFindingDrivers(false);
+        setShowDrivers(true);
     };
 
-    const handleBackToRoute = () => {
-        setBookingStep('enterRoute');
-        setSheetHeight(280);
-        setSelectedRide(null);
+    const handleRideSelect = (rideId: string) => {
+        setSelectedRide(rideId);
+        // Automatically find drivers when a ride is selected
+        handleFindDrivers();
     };
 
-    return (
-        <div className="book-ride-page-layout">
-            <div className="book-ride-map-container">
-                <Map 
-                    pickupCoords={pickupCoords} 
-                    destinationCoords={destinationCoords} 
-                    userLocation={userLocation}
-                    onRouteCalculated={(details) => {
-                        setDistance(details.distance);
-                        setDuration(details.duration);
-                    }}
-                />
-            </div>
+    const handleDriverSelect = (driver: Driver) => {
+        setSelectedDriver(driver);
+        
+        // Animate other drivers out
+        if (driversContainerRef.current) {
+            const driverCards = driversContainerRef.current.querySelectorAll('.driver-card');
+            driverCards.forEach((card, index) => {
+                const driverId = card.getAttribute('data-driver-id');
+                if (driverId !== driver.id) {
+                    gsap.to(card, {
+                        x: -100,
+                        opacity: 0,
+                        duration: 0.4,
+                        ease: "power2.in",
+                        onComplete: () => {
+                            // Remove from DOM after animation
+                            setTimeout(() => {
+                                setShowDrivers(false);
+                                handleConfirmRide(driver);
+                            }, 400);
+                        }
+                    });
+                }
+            });
+        }
+    };
+
+    const handleConfirmRide = async (driver?: Driver) => {
+        const finalDriver = driver || selectedDriver;
+        if (!finalDriver || !selectedRide || !pickup || !destination) {
+            console.log('Please fill in all required fields and select a driver.');
+            return;
+        }
+
+        setIsLoading(true);
+        
+        // Simulate ride confirmation process
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Generate trip details
+        const selectedRideDetails = rideOptions.find(r => r.id === selectedRide);
+        const estimatedDuration = `${Math.round(distance * 2.5)}-${Math.round(distance * 3.5)} min`;
+        
+        const newTrip: Trip = {
+            id: `trip_${Date.now()}`, // Unique ID with timestamp
+            date: new Date().toISOString().split('T')[0],
+            time: new Date().toLocaleTimeString('en-US', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                hour12: true 
+            }),
+            pickup: pickup,
+            destination: destination,
+            driver: finalDriver.name,
+            car: finalDriver.car,
+            license: finalDriver.license,
+            price: finalDriver.price,
+            status: 'upcoming',
+            duration: estimatedDuration,
+            distance: `${distance} km`
+        };
+
+        // Save to localStorage - prevent duplicates by checking existing trips
+        const existingTrips = JSON.parse(localStorage.getItem('userTrips') || '[]');
+        
+        // Check if this trip already exists (same driver, pickup, destination, and recent timestamp)
+        const isDuplicate = existingTrips.some((trip: Trip) => 
+            trip.driver === newTrip.driver && 
+            trip.pickup === newTrip.pickup && 
+            trip.destination === newTrip.destination &&
+            Math.abs(new Date(trip.date).getTime() - new Date(newTrip.date).getTime()) < 60000 // Within 1 minute
+        );
+
+        if (!isDuplicate) {
+            const updatedTrips = [newTrip, ...existingTrips];
+            localStorage.setItem('userTrips', JSON.stringify(updatedTrips));
+            setConfirmedTrip(newTrip);
+            setIsLoading(false);
+            setShowConfirmation(true);
+        } else {
+            console.log('Duplicate ride detected, not saving again.');
+            setIsLoading(false);
+        }
+    };
+
+    const handleBackToOverview = () => {
+        router.push('/dashboard/overview');
+    };
+
+    const handlePickupChange = async (newPickup: string) => {
+        setPickup(newPickup);
+        if (destination) {
+            const pickupCoords = await getLocationCoordinates(newPickup);
+            const destCoords = await getLocationCoordinates(destination);
             
-            <div 
-                className={`bottom-sheet ${bookingStep}`}
-                style={{ height: `${sheetHeight}px` }}
-            >
-                <div className="handle-bar"></div>
-                
-                <div className="sheet-content">
-                    {bookingStep === 'enterRoute' && (
-                        <RouteSelectionView
-                            pickup={pickup}
-                            destination={destination}
-                            onDestinationChange={handleDestinationSelect}
-                        />
-                    )}
+            const calculatedDistance = calculateDistance(
+                pickupCoords.lat, pickupCoords.lng,
+                destCoords.lat, destCoords.lng
+            );
+            
+            setDistance(calculatedDistance);
+            
+            const prices: { [key: string]: string } = {};
+            rideOptions.forEach(ride => {
+                const price = calculatePrice(ride.basePrice, calculatedDistance);
+                prices[ride.id] = `₦${price.toLocaleString()}`;
+            });
+            setCalculatedPrices(prices);
+        }
+    };
 
-                    {bookingStep === 'selectRide' && (
-                        <RideSelectionView
-                            duration={duration}
-                            selectedRide={selectedRide}
-                            onRideSelect={setSelectedRide}
-                            onBack={handleBackToRoute}
-                            onFindDriver={handleFindDriver}
-                            isFindingDriver={isFindingDriver}
-                            calculatePrice={calculatePrice}
-                        />
-                    )}
-
-                    {bookingStep === 'selectDriver' && (
-                        <DriverSelectionView
-                            selectedDriver={selectedDriver}
-                            onDriverSelect={setSelectedDriver}
-                            onBack={handleBackToRideSelection}
-                            onConfirmRide={handleConfirmRide}
-                            selectedRide={selectedRide}
-                            calculatePrice={calculatePrice}
-                        />
-                    )}
-                </div>
-            </div>
-        </div>
-    );
-}
-
-// Sub-components for better organization
-const RouteSelectionView: React.FC<{
-    pickup: string;
-    destination: string;
-    onDestinationChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
-}> = ({ pickup, destination, onDestinationChange }) => (
-    <div className="content-view">
-        <h3>Enter your route</h3>
-        <div className="location-inputs">
-            <div className="input-group">
-                <span>FROM</span>
-                <p>{pickup}</p>
-            </div>
-            <div className="input-group">
-                <span>TO</span>
-                <select 
-                    value={destination} 
-                    onChange={onDestinationChange}
-                    className="destination-select"
-                >
-                    <option value="">Select a destination</option>
-                    {lagosLocations.map(loc => (
-                        <option key={loc.name} value={loc.name}>
-                            {loc.name}
-                        </option>
-                    ))}
-                </select>
-            </div>
-        </div>
-    </div>
-);
-
-const RideSelectionView: React.FC<{
-    duration: number | null;
-    selectedRide: RideOption | null;
-    onRideSelect: (ride: RideOption) => void;
-    onBack: () => void;
-    onFindDriver: () => void;
-    isFindingDriver: boolean;
-    calculatePrice: (option: RideOption) => string;
-}> = ({ duration, selectedRide, onRideSelect, onBack, onFindDriver, isFindingDriver, calculatePrice }) => (
-    <div className="content-view">
-        <button onClick={onBack} className="sheet-back-btn">
-            <ArrowLeft size={18}/> Back
-        </button>
+    const handleDestinationSelect = async (newDestination: string) => {
+        setDestination(newDestination);
+        const pickupCoords = await getLocationCoordinates(pickup);
+        const destCoords = await getLocationCoordinates(newDestination);
         
-        <h3>Choose a ride</h3>
+        const calculatedDistance = calculateDistance(
+            pickupCoords.lat, pickupCoords.lng,
+            destCoords.lat, destCoords.lng
+        );
         
-        <div className="options-list">
-            {rideOptions.map(option => (
-                <div 
-                    key={option.id} 
-                    onClick={() => onRideSelect(option)}
-                    className={`ride-option-card ${selectedRide?.id === option.id ? 'selected' : ''} ${option.isPopular ? 'popular' : ''}`}
-                >
-                    {option.isPopular && <div className="popular-badge">Most Popular</div>}
-                    
-                    <div className="ride-info">
-                        <div className="ride-icon">{option.icon}</div>
-                        <div className="ride-details">
-                            <h4>{option.name}</h4>
-                            <p>{option.description}</p>
-                            <div className="ride-features">
-                                <span><Clock size={12}/> {Math.round(duration || 0)} min</span>
-                                <span>•</span>
-                                <span>{option.capacity} seats</span>
-                                <span>•</span>
-                                <span>{option.features.join(', ')}</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="ride-price">
-                        ₦{calculatePrice(option)}
-                    </div>
-                </div>
-            ))}
-        </div>
+        setDistance(calculatedDistance);
         
-        <button 
-            onClick={onFindDriver}
-            disabled={!selectedRide || isFindingDriver}
-            className="sheet-action-btn"
-        >
-            {isFindingDriver ? (
-                <>
-                    <Loader size={18} className="animate-spin" />
-                    Finding Drivers...
-                </>
-            ) : (
-                'Find Available Drivers'
-            )}
-        </button>
-    </div>
-);
+        const prices: { [key: string]: string } = {};
+        rideOptions.forEach(ride => {
+            const price = calculatePrice(ride.basePrice, calculatedDistance);
+            prices[ride.id] = `₦${price.toLocaleString()}`;
+        });
+        setCalculatedPrices(prices);
+    };
 
-const DriverSelectionView: React.FC<{
-    selectedDriver: Driver | null;
-    onDriverSelect: (driver: Driver) => void;
-    onBack: () => void;
-    onConfirmRide: () => void;
-    selectedRide: RideOption | null;
-    calculatePrice: (option: RideOption) => string;
-}> = ({ selectedDriver, onDriverSelect, onBack, onConfirmRide, selectedRide, calculatePrice }) => (
-    <div className="content-view">
-        <button onClick={onBack} className="sheet-back-btn">
-            <ArrowLeft size={18}/> Back
-        </button>
-        
-        <h3>Available Drivers</h3>
-        <p className="driver-selection-subtitle">Choose your preferred driver</p>
-        
-        <div className="driver-list">
-            {mockDrivers.map(driver => (
-                <div 
-                    key={driver.id} 
-                    onClick={() => onDriverSelect(driver)}
-                    className={`driver-select-card ${selectedDriver?.id === driver.id ? 'selected' : ''}`}
-                >
-                    <div className="driver-select-info">
-                        <div className="driver-select-avatar">
-                            <User size={20} />
-                        </div>
-                        <div className="driver-details">
-                            <h4>
-                                {driver.name} 
-                                <Star size={12} className="inline-star" /> 
-                                {driver.rating}
-                            </h4>
-                            <p>{driver.car} • {driver.license}</p>
-                            <div className="driver-eta">
-                                <Clock size={12} />
-                                {driver.eta} min away
-                            </div>
-                        </div>
-                    </div>
-                    <div className="driver-select-price">
-                        ₦{selectedRide ? calculatePrice(selectedRide) : '0'}
-                    </div>
-                </div>
-            ))}
-        </div>
-        
-        <button 
-            onClick={onConfirmRide}
-            disabled={!selectedDriver}
-            className="sheet-action-btn confirm-ride-btn"
-        >
-            <CheckCircle size={18} />
-            Confirm Ride with {selectedDriver?.name.split(' ')[0]}
-        </button>
-    </div>
-);
+    const handleViewTrips = () => {
+        setShowConfirmation(false);
+        router.push('/dashboard/trips');
+    };
 
-function BookRidePageContent() {
-    const [hasActiveRide, setHasActiveRide] = useState<boolean | null>(null);
-    
-    useEffect(() => {
-        setHasActiveRide(!!localStorage.getItem('active_ride_passenger'));
-    }, []);
+    const selectedRideDetails = selectedRide ? rideOptions.find(r => r.id === selectedRide) : null;
+    const fromOverview = searchParams.get('fromOverview') === 'true';
 
-    if (hasActiveRide === null) {
-        return <div className="loading-overlay">Loading...</div>;
-    }
-
-    return hasActiveRide ? <ActiveRideContent /> : <BookingFlowContent />;
-}
-
-export default function BookRidePage() {
     return (
-        <Suspense fallback={<div className="loading-overlay">Loading...</div>}>
-            <BookRidePageContent />
-        </Suspense>
+        <div className="space-y-6 md:space-y-8">
+            {/* Header */}
+            <header className="pt-2 md:pt-0">
+                <div className="flex items-center gap-4 mb-4">
+                    <button
+                        onClick={handleBackToOverview}
+                        className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors"
+                    >
+                        <ArrowLeft size={20} />
+                        <span>Back</span>
+                    </button>
+                </div>
+                <h1 className="text-2xl md:text-4xl font-bold text-gray-800">
+                    {fromOverview ? 'Rides Available!' : 'Book a Ride'}
+                </h1>
+                <p className="text-gray-500 mt-1 text-sm md:text-base">
+                    {fromOverview 
+                        ? `Great options found for your trip to ${destination}`
+                        : 'Get where you need to go, comfortably and safely'
+                    }
+                </p>
+            </header>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8">
+                {/* Booking Form */}
+                <div className="lg:col-span-2 space-y-6">
+                    {/* Location Inputs */}
+                    <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm space-y-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                            <div className="flex-1">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Pickup Location</label>
+                                <div className="relative">
+                                    <MapPin size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                                    <select
+                                        value={pickup}
+                                        onChange={(e) => handlePickupChange(e.target.value)}
+                                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FFC107] focus:border-transparent appearance-none bg-white text-sm md:text-base"
+                                    >
+                                        <option value="Current Location">
+                                            {isGettingLocation ? 'Getting location...' : 'Current Location'}
+                                        </option>
+                                        {popularLagosAreas.map(area => (
+                                            <option key={area} value={area}>{area}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                            <div className="flex-1">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Destination</label>
+                                <div className="relative">
+                                    <MapPin size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                                    <select
+                                        value={destination}
+                                        onChange={(e) => handleDestinationSelect(e.target.value)}
+                                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FFC107] focus:border-transparent appearance-none bg-white text-sm md:text-base"
+                                    >
+                                        <option value="">Select destination</option>
+                                        {popularLagosAreas.map(area => (
+                                            <option key={area} value={area}>{area}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        {distance > 0 && (
+                            <div className="bg-blue-50 p-3 md:p-4 rounded-lg border border-blue-200">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <Navigation size={16} className="text-blue-600" />
+                                        <span className="text-sm font-medium text-blue-800">Trip Distance</span>
+                                    </div>
+                                    <span className="text-lg font-bold text-blue-800">{distance} km</span>
+                                </div>
+                                <p className="text-xs text-blue-600 mt-1">
+                                    Estimated travel time: {Math.round(distance * 2.5)}-{Math.round(distance * 3.5)} minutes
+                                </p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Schedule Options */}
+                    <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm">
+                        <h3 className="font-bold text-lg mb-4">Schedule Your Ride</h3>
+                        <div className="grid grid-cols-2 gap-3 md:gap-4">
+                            <button
+                                onClick={() => setRideTime('now')}
+                                className={`p-3 md:p-4 rounded-lg border-2 text-left transition-all ${
+                                    rideTime === 'now' 
+                                        ? 'border-[#FFC107] bg-yellow-50 ring-2 ring-yellow-100' 
+                                        : 'border-gray-200 hover:border-gray-300'
+                                }`}
+                            >
+                                <Zap size={18} className="mb-2 text-yellow-500" />
+                                <p className="font-semibold text-sm md:text-base">Ride Now</p>
+                                <p className="text-xs md:text-sm text-gray-500">Get a ride ASAP</p>
+                            </button>
+                            <button
+                                onClick={() => setRideTime('later')}
+                                className={`p-3 md:p-4 rounded-lg border-2 text-left transition-all ${
+                                    rideTime === 'later' 
+                                        ? 'border-[#FFC107] bg-yellow-50 ring-2 ring-yellow-100' 
+                                        : 'border-gray-200 hover:border-gray-300'
+                                }`}
+                            >
+                                <Calendar size={18} className="mb-2 text-blue-500" />
+                                <p className="font-semibold text-sm md:text-base">Schedule</p>
+                                <p className="text-xs md:text-sm text-gray-500">Plan for later</p>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Ride Options OR Drivers List */}
+                    <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm relative">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="font-bold text-lg">
+                                {showDrivers ? 'Available Drivers' : 'Choose Your Ride'}
+                            </h3>
+                            <span className="text-sm text-gray-500">
+                                {showDrivers ? `${availableDrivers.length} drivers available` : `${rideOptions.length} options available`}
+                            </span>
+                        </div>
+
+                        {!showDrivers ? (
+                            /* Ride Options - Updated for mobile */
+                            <div className="space-y-3 md:space-y-4">
+                                {rideOptions.map((ride) => (
+                                    <div
+                                        key={ride.id}
+                                        onClick={() => handleRideSelect(ride.id)}
+                                        className={`p-3 md:p-4 rounded-xl border-2 cursor-pointer transition-all hover:shadow-md ${
+                                            selectedRide === ride.id 
+                                                ? 'border-[#FFC107] bg-yellow-50 ring-2 ring-yellow-100' 
+                                                : 'border-gray-200 hover:border-gray-300'
+                                        } ${ride.popular ? 'ring-2 ring-yellow-200' : ''}`}
+                                    >
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                            <div className="flex items-start gap-3 flex-1 min-w-0">
+                                                <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                                                    {ride.icon}
+                                                </div>
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-1">
+                                                        <h4 className="font-bold text-gray-800 text-sm md:text-base truncate">
+                                                            {ride.name}
+                                                        </h4>
+                                                        {ride.popular && (
+                                                            <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded-full self-start sm:self-center whitespace-nowrap">
+                                                                Popular
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-xs md:text-sm text-gray-500 mb-2 line-clamp-1">
+                                                        {ride.description}
+                                                    </p>
+                                                    <div className="flex flex-wrap gap-3 mb-2">
+                                                        <span className="flex items-center gap-1 text-xs text-gray-600">
+                                                            <Clock size={12} />
+                                                            {ride.eta}
+                                                        </span>
+                                                        <span className="flex items-center gap-1 text-xs text-gray-600">
+                                                            <Users size={12} />
+                                                            {ride.capacity} seats
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {ride.features.slice(0, 2).map((feature, index) => (
+                                                            <span key={index} className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full whitespace-nowrap">
+                                                                {feature}
+                                                            </span>
+                                                        ))}
+                                                        {ride.features.length > 2 && (
+                                                            <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
+                                                                +{ride.features.length - 2} more
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="text-right flex-shrink-0 sm:self-start">
+                                                <p className="text-lg md:text-xl font-bold text-gray-800 whitespace-nowrap">
+                                                    {calculatedPrices[ride.id] || ride.price}
+                                                </p>
+                                                <p className="text-xs text-gray-500">estimated</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            /* Drivers List */
+                            <div ref={driversContainerRef} className="space-y-3 md:space-y-4">
+                                {availableDrivers.map((driver) => (
+                                    <div key={driver.id} data-driver-id={driver.id} className="driver-card">
+                                        <DriverCard
+                                            driver={driver}
+                                            isSelected={selectedDriver?.id === driver.id}
+                                            onSelect={handleDriverSelect}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Finding Drivers Overlay */}
+                        {isFindingDrivers && (
+                            <div className="absolute inset-0 bg-white bg-opacity-90 rounded-2xl flex items-center justify-center">
+                                <div className="text-center max-w-sm p-4">
+                                    <div className="w-12 h-12 md:w-16 md:h-16 border-4 border-[#FFC107] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                                    <h3 className="font-bold text-xl md:text-2xl text-gray-800 mb-2">Finding Available Drivers</h3>
+                                    <p className="text-gray-600 text-sm md:text-base mb-4">
+                                        Searching for the best drivers near you for your trip to <strong>{destination}</strong>
+                                    </p>
+                                    <div className="w-full bg-gray-200 rounded-full h-2">
+                                        <div className="bg-[#FFC107] h-2 rounded-full animate-pulse"></div>
+                                    </div>
+                                    <p className="text-xs md:text-sm text-gray-500 mt-2">This may take a few seconds...</p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Sidebar */}
+                <div className="space-y-6">
+                    {/* Ride Summary */}
+                    <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm sticky top-6">
+                        <h3 className="font-bold text-lg mb-4">Ride Summary</h3>
+                        {selectedRideDetails ? (
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-gray-600 text-sm md:text-base">Ride type</span>
+                                    <span className="font-semibold text-sm md:text-base">{selectedRideDetails.name}</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-gray-600 text-sm md:text-base">Pickup</span>
+                                    <span className="font-semibold text-xs md:text-sm text-right max-w-[100px] md:max-w-[120px] truncate">
+                                        {pickup || 'Not set'}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-gray-600 text-sm md:text-base">Destination</span>
+                                    <span className="font-semibold text-xs md:text-sm text-right max-w-[100px] md:max-w-[120px] truncate">
+                                        {destination || 'Not set'}
+                                    </span>
+                                </div>
+                                {distance > 0 && (
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-gray-600 text-sm md:text-base">Distance</span>
+                                        <span className="font-semibold text-sm md:text-base">{distance} km</span>
+                                    </div>
+                                )}
+                                <div className="flex justify-between items-center">
+                                    <span className="text-gray-600 text-sm md:text-base">ETA</span>
+                                    <span className="font-semibold text-sm md:text-base">{selectedRideDetails.eta}</span>
+                                </div>
+                                <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                                    <span className="text-gray-600 text-sm md:text-base">Estimated price</span>
+                                    <span className="text-lg md:text-xl font-bold text-gray-800">
+                                        {calculatedPrices[selectedRideDetails.id] || selectedRideDetails.price}
+                                    </span>
+                                </div>
+                                
+                                {selectedDriver && (
+                                    <>
+                                        <div className="pt-2 border-t border-gray-200">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-gray-600 text-sm md:text-base">Selected Driver</span>
+                                                <span className="font-semibold text-sm md:text-base truncate max-w-[100px]">
+                                                    {selectedDriver.name}
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-gray-600 text-sm md:text-base">Final Price</span>
+                                                <span className="text-lg md:text-xl font-bold text-green-600">{selectedDriver.price}</span>
+                                            </div>
+                                        </div>
+                                        <button 
+                                            onClick={() => handleConfirmRide()}
+                                            disabled={isLoading}
+                                            className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg transition-colors duration-200 mt-4 flex items-center justify-center gap-2 text-sm md:text-base"
+                                        >
+                                            {isLoading ? (
+                                                <>
+                                                    <div className="w-4 h-4 md:w-5 md:h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                                    Confirming...
+                                                </>
+                                            ) : (
+                                                'Confirm Ride'
+                                            )}
+                                        </button>
+                                    </>
+                                )}
+                                
+                                {(!pickup || !destination) && !selectedDriver && (
+                                    <p className="text-red-500 text-xs text-center mt-2">
+                                        Please fill in both pickup and destination
+                                    </p>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="text-center py-6">
+                                <Car size={32} className="text-gray-300 mx-auto mb-3" />
+                                <p className="text-gray-500 text-sm mb-2">No ride selected</p>
+                                <p className="text-gray-400 text-xs">Choose a ride option to see details</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* Confirmation Modal */}
+            <RideConfirmationModal
+                isOpen={showConfirmation}
+                onClose={() => setShowConfirmation(false)}
+                trip={confirmedTrip!}
+                onViewTrips={handleViewTrips}
+            />
+        </div>
     );
-}
+};
+
+export default BookRide;
