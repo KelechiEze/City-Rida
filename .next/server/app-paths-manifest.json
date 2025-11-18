@@ -3,6 +3,7 @@
   "/page": "app/page.js",
   "/login/page": "app/login/page.js",
   "/dashboard/overview/page": "app/dashboard/overview/page.js",
-  "/dashboard/book/page": "app/dashboard/book/page.js",
-  "/dashboard/trips/page": "app/dashboard/trips/page.js"
+  "/dashboard/trips/page": "app/dashboard/trips/page.js",
+  "/dashboard/profile/page": "app/dashboard/profile/page.js",
+  "/dashboard/book/page": "app/dashboard/book/page.js"
 }

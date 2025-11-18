@@ -21,7 +21,6 @@
     "/dashboard/overview/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/css/app/dashboard/overview/page.css",
       "static/chunks/app/dashboard/overview/page.js"
     ],
     "/dashboard/layout": [
@@ -33,14 +32,17 @@
     "/dashboard/book/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/css/app/dashboard/book/page.css",
       "static/chunks/app/dashboard/book/page.js"
     ],
     "/dashboard/trips/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/css/app/dashboard/trips/page.css",
       "static/chunks/app/dashboard/trips/page.js"
+    ],
+    "/dashboard/profile/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/dashboard/profile/page.js"
     ],
     "/_not-found/page": [
       "static/chunks/webpack.js",
